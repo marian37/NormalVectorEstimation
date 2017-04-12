@@ -8,6 +8,7 @@ using OpenTK.Graphics.OpenGL;
 using System.Drawing;
 using System.Globalization;
 using Accord.Statistics.Analysis;
+using Accord.Math;
 
 namespace NormalVectorEstimation
 {
@@ -43,8 +44,8 @@ namespace NormalVectorEstimation
             Dictionary<ColorPoint3D, List<ColorPoint3D>> neighbours = GetNeighbours(points);
 
             //Ransac(neighbours);
-            Pca(neighbours);
-            //LinearRegression();
+            //Pca(neighbours);
+            LinearRegression(neighbours);
 
             try
             {
@@ -145,7 +146,7 @@ namespace NormalVectorEstimation
                     {
                         neighbours.Add(p);
                     }
-                }                
+                }
 
                 neighbourhood.Add(point, neighbours);
             }
@@ -206,7 +207,7 @@ namespace NormalVectorEstimation
                     maxInliers = inliers;
                     bestNormal = normal;
                 }
-            }            
+            }
 
             return bestNormal;
         }
@@ -255,7 +256,48 @@ namespace NormalVectorEstimation
 
         private static void LinearRegression(Dictionary<ColorPoint3D, List<ColorPoint3D>> neighbourhood)
         {
+            normals = new Dictionary<ColorPoint3D, ColorPoint3D>();
 
+            foreach (KeyValuePair<ColorPoint3D, List<ColorPoint3D>> pair in neighbourhood)
+            {
+                ColorPoint3D normal = LinearRegressionNormal(pair.Value);
+                Console.WriteLine(normal);
+                normals.Add(pair.Key, normal);
+            }
+        }
+
+        private static ColorPoint3D LinearRegressionNormal(List<ColorPoint3D> neighbours)
+        {
+            float x = 0, y = 0, z = 0, xx = 0, xy = 0, xz = 0, yy = 0, yz = 0, zz = 0, kx = 0, ky = 0, kz = 0, ki = 0;
+            int k = 1000;
+            int n = neighbours.Count;
+
+            foreach (ColorPoint3D p in neighbours)
+            {
+                x += p.X;
+                y += p.Y;
+                z += p.Z;
+                xx += p.X * p.X;
+                xy += p.X * p.Y;
+                xz += p.X * p.Z;
+                yy += p.Y * p.Y;
+                yz += p.Y * p.Z;
+                zz += p.Z * p.Z;
+                kx += k * p.X;
+                ky += k * p.Y;
+                kz += k * p.Z;
+                ki += k;
+            }
+
+            double[,] matrix = { { xx, xy, xz, x},
+                { xy, yy, yz, y },
+                { xz, yz, zz, z},
+                { x, y, z, n} };
+            double[] rightSide = { kx, ky, kz, ki };
+
+            double[] coeff = Matrix.Solve(matrix, rightSide, true);
+
+            return new ColorPoint3D(Convert.ToSingle(coeff[0]), Convert.ToSingle(coeff[1]), Convert.ToSingle(coeff[2]), 0, 0, 0);
         }
 
         private static void DrawNormals()
