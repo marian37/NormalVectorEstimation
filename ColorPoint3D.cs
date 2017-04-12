@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NormalVectorEstimation
 {
-    class ColorPoint3D
+    public class ColorPoint3D
     {
         private float x;
         private float y;
