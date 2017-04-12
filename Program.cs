@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using OpenTK.Graphics.OpenGL;
 using System.Drawing;
 using System.Globalization;
+using Accord.Statistics.Analysis;
 
 namespace NormalVectorEstimation
 {
@@ -217,7 +218,39 @@ namespace NormalVectorEstimation
 
         private static void Pca(Dictionary<ColorPoint3D, List<ColorPoint3D>> neighbourhood)
         {
+            normals = new Dictionary<ColorPoint3D, ColorPoint3D>();
 
+            foreach (KeyValuePair<ColorPoint3D, List<ColorPoint3D>> pair in neighbourhood)
+            {
+                ColorPoint3D normal = PcaNormal(pair.Value);
+                normals.Add(pair.Key, normal);
+            }
+        }
+
+        private static ColorPoint3D PcaNormal(List<ColorPoint3D> neighbours)
+        {
+            double[,] data = PcaPrepareData(neighbours);
+
+            var pca = new PrincipalComponentAnalysis(data, AnalysisMethod.Center);
+            pca.Compute();
+
+            double[,] componentMatrix = pca.ComponentMatrix;
+
+            return new ColorPoint3D((float)componentMatrix[0, 2], (float)componentMatrix[1, 2], (float)componentMatrix[2, 2], 0, 0, 0);
+        }
+
+        private static double[,] PcaPrepareData(List<ColorPoint3D> points)
+        {
+            double[,] data = new double[points.Count, 3];
+
+            for (int i = 0; i < points.Count; i++)
+            {
+                data[i, 0] = points[i].X;
+                data[i, 1] = points[i].Y;
+                data[i, 2] = points[i].Z;
+            }
+
+            return data;
         }
 
         private static void LinearRegression(Dictionary<ColorPoint3D, List<ColorPoint3D>> neighbourhood)
